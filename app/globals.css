@@ -1,13 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0D1117;
-  --foreground: #E6EDF3;
+  --color-bg-principal: #0D1117;
+  --color-bg-sidebar: #161B22;
+  --color-bg-card: #1C2128;
+  --color-accent: #F0A500;
+  --color-accent-light: #FFD166;
+  --color-node-normal: #2D3748;
+  --color-node-activo: #F0A500;
+  --color-node-nuevo: #22C55E;
+  --color-node-eliminado: #EF4444;
+  --color-text-principal: #E6EDF3;
+  --color-text-secundario: #8B949E;
+  --color-borde: #30363D;
+  --color-node-text-default: #E6EDF3;
+  --color-node-text-active: #0D1117;
+
+  --background: var(--color-bg-principal);
+  --foreground: var(--color-text-principal);
+}
+
+:root[data-theme="light"] {
+  --color-bg-principal: #FFFFFF;
+  --color-bg-sidebar: #F0F2F5;
+  --color-bg-card: #FFFFFF;
+  --color-accent: #D4870A;
+  --color-accent-light: #F0A500;
+  --color-node-normal: #E8ECF0;
+  --color-node-activo: #D4870A;
+  --color-node-nuevo: #16A34A;
+  --color-node-eliminado: #DC2626;
+  --color-text-principal: #0F172A;
+  --color-text-secundario: #475569;
+  --color-borde: #CBD5E1;
+  --color-node-text-default: #0F172A;
+  --color-node-text-active: #FFFFFF;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-principal: var(--color-bg-principal);
+  --color-sidebar: var(--color-bg-sidebar);
+  --color-card: var(--color-bg-card);
+  --color-accent: var(--color-accent);
+  --color-accent-light: var(--color-accent-light);
+  --color-secondary: var(--color-text-secundario);
+  --color-edge: var(--color-borde);
+  --color-node-nuevo: var(--color-node-nuevo);
+  --color-node-eliminado: var(--color-node-eliminado);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
 }
@@ -16,8 +57,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 * {
-  scrollbar-color: #30363D #161B22;
+  scrollbar-color: var(--color-borde) var(--color-bg-sidebar);
 }

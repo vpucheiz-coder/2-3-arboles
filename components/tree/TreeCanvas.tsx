@@ -36,7 +36,7 @@ export function TreeCanvas({
   if (!root) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg border border-dashed border-[#30363D] text-sm text-[#8B949E] ${className ?? ""}`}
+        className={`flex items-center justify-center rounded-lg border border-dashed border-edge text-sm text-secondary ${className ?? ""}`}
         style={{ minHeight }}
       >
         Árbol vacío — inserta un valor para comenzar
@@ -46,7 +46,7 @@ export function TreeCanvas({
 
   return (
     <div
-      className={`overflow-auto rounded-lg bg-[#1C2128] ${className ?? ""}`}
+      className={`overflow-auto rounded-lg bg-card ${className ?? ""}`}
       style={{ minHeight }}
     >
       <svg width={Math.max(width, 200)} height={Math.max(height, minHeight)}>
@@ -57,7 +57,7 @@ export function TreeCanvas({
               initial={{ opacity: 0, x1: link.x1, y1: link.y1, x2: link.x2, y2: link.y2 }}
               animate={{ x1: link.x1, y1: link.y1, x2: link.x2, y2: link.y2, opacity: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              stroke="#30363D"
+              stroke="var(--color-borde)"
               strokeWidth={2}
             />
           ))}

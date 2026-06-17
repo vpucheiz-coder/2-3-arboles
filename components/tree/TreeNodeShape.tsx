@@ -16,15 +16,25 @@ const HEIGHT = 44;
 const KEY_WIDTH = 46;
 
 const FILL: Record<NodeStatus, string> = {
-  default: "#2D3748",
-  active: "#F0A500",
-  new: "#22C55E",
-  removed: "#EF4444",
+  default: "var(--color-node-normal)",
+  active: "var(--color-node-activo)",
+  new: "var(--color-node-nuevo)",
+  removed: "var(--color-node-eliminado)",
+};
+
+const TEXT: Record<NodeStatus, string> = {
+  default: "var(--color-node-text-default)",
+  active: "var(--color-node-text-active)",
+  new: "#FFFFFF",
+  removed: "#FFFFFF",
 };
 
 export function TreeNodeShape({ x, y, keys, status, depth }: TreeNodeShapeProps) {
   const width = Math.max(keys.length, 1) * KEY_WIDTH;
-  const textColor = status === "active" ? "#0D1117" : "#E6EDF3";
+  const textColor = TEXT[status];
+  // A node only ever has 3 keys transiently mid-insertion (overflow) — the
+  // committed tree never has node-4s, so this alone is enough to flag it.
+  const overflow = keys.length === 3;
 
   return (
     <motion.g
@@ -45,41 +55,61 @@ export function TreeNodeShape({ x, y, keys, status, depth }: TreeNodeShapeProps)
         height={HEIGHT}
         rx={8}
         fill={FILL[status]}
-        stroke={status === "active" ? "#F0A500" : "#30363D"}
-        strokeWidth={status === "active" ? 2 : 1}
-        style={
-          status === "active"
-            ? { filter: "drop-shadow(0 0 6px rgba(240, 165, 0, 0.55))" }
-            : undefined
+        stroke={
+          overflow
+            ? "var(--color-node-eliminado)"
+            : status === "active"
+              ? "var(--color-accent)"
+              : "var(--color-borde)"
         }
+        strokeWidth={overflow ? 2.5 : status === "active" ? 2 : 1}
+        style={{
+          filter: overflow
+            ? "drop-shadow(0 0 6px var(--color-node-eliminado))"
+            : status === "active"
+              ? "drop-shadow(0 0 6px var(--color-accent))"
+              : undefined,
+        }}
       />
-      {keys.length === 2 && (
+      {keys.slice(0, -1).map((_, i) => (
         <line
-          x1={0}
+          key={i}
+          x1={-width / 2 + KEY_WIDTH * (i + 1)}
           y1={-HEIGHT / 2 + 6}
-          x2={0}
+          x2={-width / 2 + KEY_WIDTH * (i + 1)}
           y2={HEIGHT / 2 - 6}
-          stroke="#30363D"
+          stroke={textColor}
           strokeWidth={1.5}
+          opacity={0.4}
         />
+      ))}
+      {keys.map((k, i) => (
+        <text
+          key={i}
+          x={-width / 2 + KEY_WIDTH * (i + 0.5)}
+          y={5}
+          textAnchor="middle"
+          fontFamily="var(--font-inter), sans-serif"
+          fontWeight={700}
+          fontSize={16}
+          fill={textColor}
+        >
+          {k}
+        </text>
+      ))}
+      {overflow && (
+        <text
+          x={0}
+          y={-HEIGHT / 2 - 8}
+          textAnchor="middle"
+          fontFamily="var(--font-inter), sans-serif"
+          fontWeight={700}
+          fontSize={10}
+          fill="var(--color-node-eliminado)"
+        >
+          OVERFLOW
+        </text>
       )}
-      {keys.map((k, i) => {
-        const keyX = keys.length === 1 ? 0 : i === 0 ? -width / 4 : width / 4;
-        return (
-          <text
-            key={i}
-            x={keyX}
-            y={5}
-            textAnchor="middle"
-            fontFamily="var(--font-inter), sans-serif"
-            fontWeight={700}
-            fontSize={16}
-            fill={textColor}
-          >
-            {k}
-          </text>
-        );
-      })}
       {depth !== undefined && (
         <text
           x={0}
@@ -87,7 +117,7 @@ export function TreeNodeShape({ x, y, keys, status, depth }: TreeNodeShapeProps)
           textAnchor="middle"
           fontFamily="var(--font-jetbrains-mono), monospace"
           fontSize={11}
-          fill="#8B949E"
+          fill="var(--color-text-secundario)"
         >
           nivel {depth}
         </text>

@@ -8,9 +8,9 @@ interface ButtonProps {
 }
 
 const STYLES: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  primary: "bg-[#F0A500] text-black hover:bg-[#FFD166]",
-  secondary: "bg-[#21262D] text-[#E6EDF3] border border-[#30363D] hover:bg-[#30363D]",
-  danger: "bg-transparent text-[#EF4444] border border-[#EF4444] hover:bg-[#EF4444]/10",
+  primary: "bg-accent text-black hover:bg-accent-light",
+  secondary: "bg-card text-foreground border border-edge hover:bg-edge/40",
+  danger: "bg-transparent text-node-eliminado border border-node-eliminado hover:bg-node-eliminado/10",
 };
 
 export function Button({ children, onClick, disabled, variant = "secondary" }: ButtonProps) {

@@ -50,17 +50,17 @@ export function Visualizador() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <header>
-        <h2 className="text-2xl font-bold text-[#E6EDF3]">Visualizador</h2>
-        <p className="mt-1 text-[#8B949E]">
+        <h2 className="text-2xl font-bold text-foreground">Visualizador</h2>
+        <p className="mt-1 text-secondary">
           Sandbox libre — combina inserciones y eliminaciones
         </p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr_260px]">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 rounded-lg border border-[#30363D] bg-[#1C2128] p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-edge bg-card p-4">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#8B949E]">Insertar</label>
+              <label className="text-xs text-secondary">Insertar</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -68,7 +68,7 @@ export function Visualizador() {
                   onChange={(e) => setInsertVal(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && doInsert()}
                   disabled={isAnimating}
-                  className="w-full rounded-md border border-[#30363D] bg-[#0D1117] px-3 py-2 text-sm text-[#E6EDF3] outline-none focus:border-[#F0A500] disabled:opacity-50"
+                  className="w-full rounded-md border border-edge bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent disabled:opacity-50"
                 />
                 <Button variant="primary" disabled={isAnimating} onClick={doInsert}>
                   +
@@ -77,7 +77,7 @@ export function Visualizador() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#8B949E]">Eliminar</label>
+              <label className="text-xs text-secondary">Eliminar</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -85,7 +85,7 @@ export function Visualizador() {
                   onChange={(e) => setDeleteVal(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && doDelete()}
                   disabled={isAnimating}
-                  className="w-full rounded-md border border-[#30363D] bg-[#0D1117] px-3 py-2 text-sm text-[#E6EDF3] outline-none focus:border-[#F0A500] disabled:opacity-50"
+                  className="w-full rounded-md border border-edge bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent disabled:opacity-50"
                 />
                 <Button variant="danger" disabled={isAnimating} onClick={doDelete}>
                   −
@@ -93,22 +93,22 @@ export function Visualizador() {
               </div>
             </div>
 
-            <label className="flex items-center justify-between text-sm text-[#E6EDF3]">
+            <label className="flex items-center justify-between text-sm text-foreground">
               Modo paso a paso
               <input
                 type="checkbox"
                 checked={stepByStep}
                 onChange={(e) => setStepByStep(e.target.checked)}
-                className="accent-[#F0A500]"
+                className="accent-(--color-accent)"
               />
             </label>
-            <label className="flex items-center justify-between text-sm text-[#E6EDF3]">
+            <label className="flex items-center justify-between text-sm text-foreground">
               Mostrar nivel de nodos
               <input
                 type="checkbox"
                 checked={showDepth}
                 onChange={(e) => setShowDepth(e.target.checked)}
-                className="accent-[#F0A500]"
+                className="accent-(--color-accent)"
               />
             </label>
 
@@ -123,7 +123,7 @@ export function Visualizador() {
           </div>
 
           {currentDescription && (
-            <div className="rounded-md border border-[#F0A500]/40 bg-[#F0A500]/10 px-3 py-2 text-xs text-[#FFD166]">
+            <div className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-accent-light">
               {currentDescription}
             </div>
           )}

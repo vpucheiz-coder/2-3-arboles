@@ -5,7 +5,10 @@ import { useTree } from "@/context/TreeContext";
 import { TreeCanvas } from "@/components/tree/TreeCanvas";
 import { Pseudocode } from "@/components/ui/Pseudocode";
 import { Button } from "@/components/ui/Button";
+import { StepExplainer } from "@/components/ui/StepExplainer";
 import { INSERT_PSEUDOCODE } from "@/lib/pseudocode";
+import { insertWithSteps, search } from "@/lib/tree23";
+import { useStepNavigator } from "@/lib/useStepNavigator";
 
 export function Insercion() {
   const {
@@ -16,75 +19,149 @@ export function Insercion() {
     currentLine,
     currentOperation,
     currentDescription,
+    lastSteps,
     isAnimating,
     insertValue,
     loadExample,
     clearTree,
+    commitRoot,
   } = useTree();
 
   const [value, setValue] = useState("");
+  const [pendingValue, setPendingValue] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  const nav = useStepNavigator();
 
   const parsed = Number(value);
   const isValid = value.trim() !== "" && !Number.isNaN(parsed);
+  const busy = isAnimating || nav.isStepping;
 
-  const handleInsert = (stepByStep: boolean) => {
-    if (!isValid) return;
-    insertValue(parsed, stepByStep);
+  const handleInsertNow = () => {
+    if (!isValid || busy) return;
+    setError("");
+    insertValue(parsed, false);
     setValue("");
   };
 
-  const activeLine = currentOperation === "insert" ? currentLine : null;
+  const handleStepByStep = () => {
+    if (!isValid || busy) return;
+    if (search(root, parsed)) {
+      setError(`La clave ${parsed} ya existe en el árbol`);
+      return;
+    }
+    setError("");
+    const { steps } = insertWithSteps(root, parsed);
+    setPendingValue(parsed);
+    nav.start(steps);
+    setValue("");
+  };
+
+  const handleComplete = () => {
+    if (!nav.isStepping || pendingValue === null) return;
+    const last = nav.steps[nav.steps.length - 1];
+    commitRoot(last.tree, nav.steps, `+ ${pendingValue} insertado`, "insert");
+    nav.finish();
+    setPendingValue(null);
+  };
+
+  const activeLine = nav.isStepping
+    ? nav.current?.line ?? null
+    : currentOperation === "insert"
+      ? currentLine
+      : null;
+
+  const explainerSteps = nav.isStepping ? nav.steps : currentOperation === "insert" ? lastSteps : [];
+  const explainerIndex = nav.isStepping ? nav.index : explainerSteps.length - 1;
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <header>
-        <h2 className="text-2xl font-bold text-[#E6EDF3]">Inserción</h2>
-        <p className="mt-1 text-[#8B949E]">
+        <h2 className="text-2xl font-bold text-foreground">Inserción</h2>
+        <p className="mt-1 text-secondary">
           Algoritmo paso a paso con split recursivo hacia arriba
         </p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[#30363D] bg-[#1C2128] p-4">
+          <div className="flex flex-wrap items-end gap-2 rounded-lg border border-edge bg-card p-4">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#8B949E]">Valor a insertar</label>
+              <label className="text-xs text-secondary">Valor a insertar</label>
               <input
                 type="number"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleInsert(false)}
-                disabled={isAnimating}
-                className="w-28 rounded-md border border-[#30363D] bg-[#0D1117] px-3 py-2 text-sm text-[#E6EDF3] outline-none focus:border-[#F0A500] disabled:opacity-50"
+                onKeyDown={(e) => e.key === "Enter" && handleInsertNow()}
+                disabled={busy}
+                className="w-28 rounded-md border border-edge bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent disabled:opacity-50"
               />
             </div>
-            <Button variant="primary" disabled={!isValid || isAnimating} onClick={() => handleInsert(false)}>
+            <Button variant="primary" disabled={!isValid || busy} onClick={handleInsertNow}>
               Insertar
             </Button>
-            <Button disabled={!isValid || isAnimating} onClick={() => handleInsert(true)}>
+            <Button disabled={!isValid || busy} onClick={handleStepByStep}>
               Paso a paso
             </Button>
-            <Button disabled={isAnimating} onClick={() => loadExample()}>
+            <Button disabled={busy} onClick={() => loadExample()}>
               Ejemplo
             </Button>
-            <Button variant="danger" disabled={isAnimating} onClick={clearTree}>
+            <Button variant="danger" disabled={busy} onClick={clearTree}>
               Limpiar
             </Button>
           </div>
 
           <TreeCanvas
-            root={root}
-            highlightedNodes={highlightedNodes}
-            newNodes={newNodes}
-            removedNodes={removedNodes}
+            root={nav.isStepping ? nav.current?.tree ?? null : root}
+            highlightedNodes={nav.isStepping ? nav.current?.highlightedNodes : highlightedNodes}
+            newNodes={nav.isStepping ? nav.current?.newNodes : newNodes}
+            removedNodes={nav.isStepping ? nav.current?.removedNodes : removedNodes}
             minHeight={380}
           />
 
-          {currentDescription && (
-            <div className="rounded-md border border-[#F0A500]/40 bg-[#F0A500]/10 px-4 py-2 text-sm text-[#FFD166]">
+          {nav.isStepping && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-edge bg-card p-3">
+              <button
+                onClick={nav.prev}
+                disabled={nav.index === 0}
+                className="rounded-md border border-edge bg-background px-3 py-1.5 text-sm font-medium text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs text-secondary">
+                Paso {nav.index + 1} de {nav.steps.length}
+                {nav.current ? ` — ${nav.current.stepName}` : ""}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={nav.next}
+                  disabled={nav.isLast}
+                  className="rounded-md border border-edge bg-background px-3 py-1.5 text-sm font-medium text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Siguiente →
+                </button>
+                <button
+                  onClick={handleComplete}
+                  className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-black transition"
+                >
+                  ⏩ Completar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-node-eliminado/40 bg-node-eliminado/10 px-4 py-2 text-sm text-node-eliminado">
+              {error}
+            </div>
+          )}
+
+          {!nav.isStepping && currentDescription && (
+            <div className="rounded-md border border-accent/40 bg-accent/10 px-4 py-2 text-sm text-accent-light">
               {currentDescription}
             </div>
           )}
+
+          <StepExplainer steps={explainerSteps} currentIndex={explainerIndex} operation="insert" />
         </div>
 
         <Pseudocode lines={INSERT_PSEUDOCODE} activeLine={activeLine} title="insertar(clave)" />

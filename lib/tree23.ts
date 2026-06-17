@@ -16,7 +16,53 @@ export interface TreeStep {
   removedNodes: string[];
   line: number;
   description: string;
+  stepIndex: number;
+  stepName: string;
 }
+
+export const INSERT_STAGES = [
+  "Descender al nodo hoja",
+  "Insertar clave",
+  "¿Overflow?",
+  "Split",
+  "Subir al padre",
+  "¿Nueva raíz?",
+] as const;
+
+export const DELETE_STAGES = [
+  "Buscar clave",
+  "¿Es hoja?",
+  "Eliminar / Reemplazar con sucesor",
+  "¿Underflow?",
+  "Redistribuir o Fusionar",
+  "¿Raíz vacía?",
+] as const;
+
+const INSERT_STAGE_BY_LINE: Record<number, number> = {
+  [INSERT_LINE.buscarHoja]: 0,
+  [INSERT_LINE.agregar]: 1,
+  [INSERT_LINE.checkOverflow]: 2,
+  [INSERT_LINE.dividirCall]: 3,
+  [INSERT_LINE.split]: 3,
+  [INSERT_LINE.padreAgregar]: 4,
+  [INSERT_LINE.checkPadreOverflow]: 2,
+  [INSERT_LINE.dividirPadre]: 3,
+  [INSERT_LINE.esRaiz]: 5,
+  [INSERT_LINE.nuevaRaiz]: 5,
+};
+
+const DELETE_STAGE_BY_LINE: Record<number, number> = {
+  [DELETE_LINE.buscar]: 0,
+  [DELETE_LINE.eliminarClave]: 2,
+  [DELETE_LINE.checkUnderflow]: 3,
+  [DELETE_LINE.sucesor]: 2,
+  [DELETE_LINE.reemplazarSucesor]: 2,
+  [DELETE_LINE.eliminarSucesor]: 2,
+  [DELETE_LINE.hermano]: 4,
+  [DELETE_LINE.redistribuir]: 4,
+  [DELETE_LINE.fusionar]: 4,
+  [DELETE_LINE.corregirUnderflowPadre]: 5,
+};
 
 function newId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -55,6 +101,7 @@ export function search(root: TreeNode | null, value: number): TreeNode | null {
 interface BuildCtx {
   steps: TreeStep[];
   treeRef: { current: TreeNode | null };
+  operation: "insert" | "delete";
 }
 
 function pushStep(
@@ -65,6 +112,9 @@ function pushStep(
   newNodes: string[] = [],
   removedNodes: string[] = []
 ) {
+  const stageByLine = ctx.operation === "insert" ? INSERT_STAGE_BY_LINE : DELETE_STAGE_BY_LINE;
+  const stages = ctx.operation === "insert" ? INSERT_STAGES : DELETE_STAGES;
+  const stepIndex = stageByLine[line] ?? 0;
   ctx.steps.push({
     tree: cloneTree(ctx.treeRef.current),
     highlightedNodes,
@@ -72,6 +122,8 @@ function pushStep(
     removedNodes,
     line,
     description,
+    stepIndex,
+    stepName: stages[stepIndex],
   });
 }
 
@@ -95,8 +147,6 @@ function splitNode(node: TreeNode, ctx: BuildCtx): SplitResult {
     ctx,
     INSERT_LINE.split,
     `Nodo desbordado (${k0}, ${k1}, ${k2}): la clave ${k1} sube, se crean dos nodos`,
-    [node.id],
-    [left.id, right.id],
     [node.id]
   );
   return { promotedKey: k1, left, right };
@@ -112,11 +162,17 @@ function insertRec(node: TreeNode, value: number, ctx: BuildCtx): SplitResult | 
       `Insertando ${value} en la hoja [${node.keys.join(", ")}]`,
       [node.id]
     );
-    pushStep(ctx, INSERT_LINE.checkOverflow, `¿La hoja tiene 3 claves?`, [node.id]);
     if (node.keys.length === 3) {
+      pushStep(
+        ctx,
+        INSERT_LINE.checkOverflow,
+        `Nodo en overflow: 3 claves temporales [${node.keys.join(", ")}]. Se requiere split.`,
+        [node.id]
+      );
       pushStep(ctx, INSERT_LINE.dividirCall, `Overflow: dividir la hoja`, [node.id]);
       return splitNode(node, ctx);
     }
+    pushStep(ctx, INSERT_LINE.checkOverflow, `✓ No hay overflow — inserción completada.`, [node.id]);
     return null;
   }
 
@@ -140,19 +196,26 @@ function insertRec(node: TreeNode, value: number, ctx: BuildCtx): SplitResult | 
     ctx,
     INSERT_LINE.padreAgregar,
     `La clave ${result.promotedKey} sube al padre [${node.keys.join(", ")}]`,
-    [node.id]
+    [node.id],
+    [result.left.id, result.right.id]
   );
-  pushStep(ctx, INSERT_LINE.checkPadreOverflow, `¿El padre tiene 3 claves?`, [node.id]);
   if (node.keys.length === 3) {
+    pushStep(
+      ctx,
+      INSERT_LINE.checkPadreOverflow,
+      `Nodo en overflow: 3 claves temporales [${node.keys.join(", ")}]. Se requiere split.`,
+      [node.id]
+    );
     pushStep(ctx, INSERT_LINE.dividirPadre, `Overflow en el padre: dividir`, [node.id]);
     return splitNode(node, ctx);
   }
+  pushStep(ctx, INSERT_LINE.checkPadreOverflow, `✓ No hay overflow — inserción completada.`, [node.id]);
   return null;
 }
 
 export function insertWithSteps(root: TreeNode | null, value: number): { root: TreeNode | null; steps: TreeStep[] } {
   const clonedRoot = cloneTree(root);
-  const ctx: BuildCtx = { steps: [], treeRef: { current: clonedRoot } };
+  const ctx: BuildCtx = { steps: [], treeRef: { current: clonedRoot }, operation: "insert" };
 
   if (!clonedRoot) {
     const leaf = createLeaf([value]);
@@ -171,7 +234,7 @@ export function insertWithSteps(root: TreeNode | null, value: number): { root: T
       INSERT_LINE.nuevaRaiz,
       `Se crea una nueva raíz con la clave ${result.promotedKey}`,
       [newRoot.id],
-      [newRoot.id]
+      [newRoot.id, result.left.id, result.right.id]
     );
     return { root: newRoot, steps: ctx.steps };
   }
@@ -310,7 +373,7 @@ function deleteRec(node: TreeNode, value: number, ctx: BuildCtx): boolean {
 
 export function deleteWithSteps(root: TreeNode | null, value: number): { root: TreeNode | null; steps: TreeStep[] } {
   const clonedRoot = cloneTree(root);
-  const ctx: BuildCtx = { steps: [], treeRef: { current: clonedRoot } };
+  const ctx: BuildCtx = { steps: [], treeRef: { current: clonedRoot }, operation: "delete" };
 
   if (!clonedRoot) {
     return { root: null, steps: [] };

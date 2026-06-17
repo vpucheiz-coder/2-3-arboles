@@ -31,12 +31,19 @@ interface TreeContextValue {
   currentLine: number | null;
   currentOperation: "insert" | "delete" | null;
   currentDescription: string;
+  lastSteps: TreeStep[];
   history: HistoryEntry[];
   isAnimating: boolean;
   insertValue: (value: number, stepByStep: boolean) => Promise<void>;
   deleteValue: (value: number, stepByStep: boolean) => Promise<void>;
   loadExample: () => Promise<void>;
   clearTree: () => void;
+  commitRoot: (
+    finalRoot: TreeNode | null,
+    steps: TreeStep[],
+    historyText: string,
+    type: "insert" | "delete"
+  ) => void;
 }
 
 const TreeContext = createContext<TreeContextValue | null>(null);
@@ -56,6 +63,7 @@ export function TreeProvider({ children }: { children: ReactNode }) {
   const [currentLine, setCurrentLine] = useState<number | null>(null);
   const [currentOperation, setCurrentOperation] = useState<"insert" | "delete" | null>(null);
   const [currentDescription, setCurrentDescription] = useState("");
+  const [lastSteps, setLastSteps] = useState<TreeStep[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -81,6 +89,7 @@ export function TreeProvider({ children }: { children: ReactNode }) {
       isAnimatingRef.current = true;
       setIsAnimating(true);
       setCurrentOperation(operation);
+      setLastSteps(steps);
 
       if (stepByStep) {
         for (const step of steps) {
@@ -162,7 +171,29 @@ export function TreeProvider({ children }: { children: ReactNode }) {
     setCurrentLine(null);
     setCurrentDescription("");
     setCurrentOperation(null);
+    setLastSteps([]);
   }, []);
+
+  const commitRoot = useCallback(
+    (
+      finalRoot: TreeNode | null,
+      steps: TreeStep[],
+      historyText: string,
+      type: "insert" | "delete"
+    ) => {
+      const last = steps[steps.length - 1];
+      setRoot(finalRoot);
+      setHighlightedNodes([]);
+      setNewNodes([]);
+      setRemovedNodes([]);
+      setCurrentOperation(type);
+      setLastSteps(steps);
+      setCurrentLine(last ? last.line : null);
+      setCurrentDescription(last ? last.description : "");
+      pushHistory(historyText, type);
+    },
+    [pushHistory]
+  );
 
   return (
     <TreeContext.Provider
@@ -174,12 +205,14 @@ export function TreeProvider({ children }: { children: ReactNode }) {
         currentLine,
         currentOperation,
         currentDescription,
+        lastSteps,
         history,
         isAnimating,
         insertValue,
         deleteValue,
         loadExample,
         clearTree,
+        commitRoot,
       }}
     >
       {children}
